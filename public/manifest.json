@@ -1,0 +1,22 @@
+{
+  "name": "OZMO Cosméticos y Perfumes",
+  "short_name": "OZMO",
+  "description": "Boutique digital premium de cosméticos y perfumes",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "/logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}

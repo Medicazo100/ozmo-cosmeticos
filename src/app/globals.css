@@ -1,0 +1,122 @@
+@import "tailwindcss";
+
+@theme {
+  --color-rose-50: #fff0f6;
+  --color-rose-100: #ffdeeb;
+  --color-rose-200: #fcc2d7;
+  --color-rose-300: #faa2c1;
+  --color-rose-400: #f783ac;
+  --color-rose-500: #ff1493; /* Base Vibrant Fuchsia */
+  --color-rose-600: #e6007e;
+  --color-rose-700: #c10065;
+  --color-rose-800: #9e004f;
+  --color-rose-900: #700035;
+
+  --color-gold-50: #faf6eb;
+  --color-gold-100: #f3ead3;
+  --color-gold-200: #e6d2a4;
+  --color-gold-300: #d6b772;
+  --color-gold-400: #c79e4c;
+  --color-gold-500: #c5a880; /* Base Sephora Gold */
+  --color-gold-600: #9b7f5b;
+  --color-gold-700: #745c41;
+  --color-gold-800: #4f3d2a;
+  --color-gold-900: #2b2116;
+
+  --color-warm-50: #faf9f6;
+  --color-warm-100: #f5f5f0;
+  --color-warm-200: #e5e5db;
+  --color-warm-300: #c7c7b9;
+  --color-warm-400: #a3a393;
+  --color-warm-500: #7e7e6e;
+  --color-warm-600: #626254;
+  --color-warm-700: #4b4b3f;
+  --color-warm-800: #33332a;
+  --color-warm-900: #1c1c1a;
+  
+  --font-serif: var(--font-playfair), serif;
+  --font-sans: var(--font-inter), sans-serif;
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #000000;
+}
+
+/* Elegant deep black theme as default for premium look */
+.dark-theme {
+  --background: #000000;
+  --foreground: #ffffff;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), sans-serif;
+  overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Fuchsia and Gold pulsing animations */
+@keyframes fuchsiaPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.03);
+  }
+}
+
+.fuchsia-pulse-hover:hover {
+  animation: fuchsiaPulse 2s infinite ease-in-out;
+}
+
+/* Premium glassmorphic container effects */
+.glass-premium {
+  background: rgba(255, 20, 147, 0.02);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 20, 147, 0.15);
+}
+
+.dark-theme .glass-premium {
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(255, 20, 147, 0.2);
+}
+
+/* Custom premium scrollbar using fuchsia and gold */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #ff1493;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #c5a880;
+}
+
+/* Custom text gradients for header and highlights */
+.text-gold-gradient {
+  background: linear-gradient(135deg, #e6d2a4 0%, #c5a880 50%, #9b7f5b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-fuchsia-gradient {
+  background: linear-gradient(135deg, #ffdeeb 0%, #ff1493 50%, #c10065 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-mixed-gradient {
+  background: linear-gradient(135deg, #ff1493 0%, #ffdeeb 40%, #e6d2a4 70%, #c5a880 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
