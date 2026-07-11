@@ -26,6 +26,28 @@ export const metadata: Metadata = {
   icons: {
     apple: "/logo.jpg",
   },
+  openGraph: {
+    title: "OZMO Cosméticos y Perfumes | Elegancia que se siente",
+    description: "Boutique digital premium de cosméticos y perfumes. Encuentra tu esencia y la elegancia que se siente en OZMO.",
+    url: "https://ozmo-cosmeticos.vercel.app",
+    siteName: "OZMO Cosméticos y Perfumes",
+    images: [
+      {
+        url: "https://ozmo-cosmeticos.vercel.app/logo.jpg",
+        width: 800,
+        height: 800,
+        alt: "OZMO Cosméticos y Perfumes - Logo",
+      },
+    ],
+    locale: "es_MX",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "OZMO Cosméticos y Perfumes | Elegancia que se siente",
+    description: "Boutique digital premium de cosméticos y perfumes. Encuentra tu esencia y la elegancia que se siente en OZMO.",
+    images: ["https://ozmo-cosmeticos.vercel.app/logo.jpg"],
+  },
 };
 
 export const viewport: Viewport = {

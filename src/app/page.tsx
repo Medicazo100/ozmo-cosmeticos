@@ -935,7 +935,7 @@ export default function CatalogPage() {
       <QRModal 
         isOpen={isQRModalOpen} 
         onClose={() => setIsQRModalOpen(false)} 
-        url={typeof window !== 'undefined' ? (window.location.origin + '/') : 'https://ozmo.mx/'} 
+        url="https://ozmo-cosmeticos.vercel.app/" 
       />
     </div>
   );
