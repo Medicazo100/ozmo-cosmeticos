@@ -236,11 +236,13 @@ export const db = {
     try {
       const stored = localStorage.getItem('ozmo_cosmeticos_products') || localStorage.getItem('perfumazo_products');
       if (stored) {
-        return JSON.parse(stored);
-      } else {
-        localStorage.setItem('ozmo_cosmeticos_products', JSON.stringify(SEED_PRODUCTS));
-        return SEED_PRODUCTS;
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
       }
+      localStorage.setItem('ozmo_cosmeticos_products', JSON.stringify(SEED_PRODUCTS));
+      return SEED_PRODUCTS;
     } catch {
       return SEED_PRODUCTS;
     }
