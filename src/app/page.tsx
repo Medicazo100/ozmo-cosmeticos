@@ -71,7 +71,7 @@ export default function CatalogPage() {
   // Cargar carrito desde localStorage una vez montado el componente (client-side only)
   useEffect(() => {
     try {
-      const savedCart = localStorage.getItem("perfumazo_cart");
+      const savedCart = localStorage.getItem("ozmo_cosmeticos_cart") || localStorage.getItem("perfumazo_cart");
       if (savedCart) setCart(JSON.parse(savedCart));
     } catch (e) {
       console.error("Error cargando el carrito", e);
@@ -82,7 +82,7 @@ export default function CatalogPage() {
   // Guardar carrito en localStorage cuando cambie (solo después de hidratar)
   useEffect(() => {
     if (!cartHydrated) return;
-    localStorage.setItem("perfumazo_cart", JSON.stringify(cart));
+    localStorage.setItem("ozmo_cosmeticos_cart", JSON.stringify(cart));
   }, [cart, cartHydrated]);
 
   // Recargar catálogo al enfocar la ventana (solo ajustes)

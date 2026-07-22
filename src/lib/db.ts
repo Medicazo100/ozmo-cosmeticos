@@ -197,7 +197,7 @@ export const db = {
   getSettings(): Settings {
     if (!isClient) return DEFAULT_SETTINGS;
     try {
-      const stored = localStorage.getItem('perfumazo_settings');
+      const stored = localStorage.getItem('ozmo_cosmeticos_settings') || localStorage.getItem('perfumazo_settings');
       if (stored) {
         const parsed = JSON.parse(stored);
         // Migración automática
@@ -211,7 +211,7 @@ export const db = {
           changed = true;
         }
         if (changed) {
-          localStorage.setItem('perfumazo_settings', JSON.stringify(parsed));
+          localStorage.setItem('ozmo_cosmeticos_settings', JSON.stringify(parsed));
         }
         return parsed;
       }
@@ -224,7 +224,7 @@ export const db = {
   saveSettings(settings: Settings): void {
     if (!isClient) return;
     try {
-      localStorage.setItem('perfumazo_settings', JSON.stringify(settings));
+      localStorage.setItem('ozmo_cosmeticos_settings', JSON.stringify(settings));
     } catch (e) {
       console.error("Error saving settings", e);
     }
@@ -234,11 +234,11 @@ export const db = {
   getProducts(): Product[] {
     if (!isClient) return SEED_PRODUCTS;
     try {
-      const stored = localStorage.getItem('perfumazo_products');
+      const stored = localStorage.getItem('ozmo_cosmeticos_products') || localStorage.getItem('perfumazo_products');
       if (stored) {
         return JSON.parse(stored);
       } else {
-        localStorage.setItem('perfumazo_products', JSON.stringify(SEED_PRODUCTS));
+        localStorage.setItem('ozmo_cosmeticos_products', JSON.stringify(SEED_PRODUCTS));
         return SEED_PRODUCTS;
       }
     } catch {
@@ -249,7 +249,7 @@ export const db = {
   resetProductsToSeed(): void {
     if (!isClient) return;
     try {
-      localStorage.setItem('perfumazo_products', JSON.stringify(SEED_PRODUCTS));
+      localStorage.setItem('ozmo_cosmeticos_products', JSON.stringify(SEED_PRODUCTS));
     } catch (e) {
       console.error("Error resetting products", e);
     }
@@ -265,7 +265,7 @@ export const db = {
       } else {
         products.push(product);
       }
-      localStorage.setItem('perfumazo_products', JSON.stringify(products));
+      localStorage.setItem('ozmo_cosmeticos_products', JSON.stringify(products));
     } catch (e) {
       console.error("Error saving product", e);
     }
@@ -276,7 +276,7 @@ export const db = {
     try {
       const products = this.getProducts();
       const filtered = products.filter(p => p.id !== id);
-      localStorage.setItem('perfumazo_products', JSON.stringify(filtered));
+      localStorage.setItem('ozmo_cosmeticos_products', JSON.stringify(filtered));
     } catch (e) {
       console.error("Error deleting product", e);
     }
@@ -286,7 +286,7 @@ export const db = {
   getOrders(): Order[] {
     if (!isClient) return [];
     try {
-      const stored = localStorage.getItem('perfumazo_orders');
+      const stored = localStorage.getItem('ozmo_cosmeticos_orders') || localStorage.getItem('perfumazo_orders');
       return stored ? JSON.parse(stored) : [];
     } catch {
       return [];
@@ -298,7 +298,7 @@ export const db = {
     try {
       const orders = this.getOrders();
       orders.push(order);
-      localStorage.setItem('perfumazo_orders', JSON.stringify(orders));
+      localStorage.setItem('ozmo_cosmeticos_orders', JSON.stringify(orders));
     } catch (e) {
       console.error("Error saving order", e);
     }
@@ -307,6 +307,7 @@ export const db = {
   clearOrders(): void {
     if (!isClient) return;
     try {
+      localStorage.removeItem('ozmo_cosmeticos_orders');
       localStorage.removeItem('perfumazo_orders');
     } catch (e) {
       console.error("Error clearing orders", e);
@@ -328,7 +329,7 @@ export const db = {
       // Actualizar el estado
       order.status = newStatus;
       orders[orderIndex] = order;
-      localStorage.setItem('perfumazo_orders', JSON.stringify(orders));
+      localStorage.setItem('ozmo_cosmeticos_orders', JSON.stringify(orders));
 
       // Aplicar reglas de negocio para el stock
       const products = this.getProducts();
@@ -342,7 +343,7 @@ export const db = {
             products[productIndex].stock = Math.max(0, products[productIndex].stock - item.quantity);
           }
         });
-        localStorage.setItem('perfumazo_products', JSON.stringify(products));
+        localStorage.setItem('ozmo_cosmeticos_products', JSON.stringify(products));
       } 
       // Si cambia de Confirmado a Pendiente o Cancelado, regresamos el stock
       else if (oldStatus === 'Confirmado' && newStatus !== 'Confirmado') {
@@ -352,7 +353,7 @@ export const db = {
             products[productIndex].stock += item.quantity;
           }
         });
-        localStorage.setItem('perfumazo_products', JSON.stringify(products));
+        localStorage.setItem('ozmo_cosmeticos_products', JSON.stringify(products));
       }
     } catch (e) {
       console.error("Error updating order status", e);
