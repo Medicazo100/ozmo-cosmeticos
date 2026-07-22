@@ -611,7 +611,7 @@ export default function CatalogPage() {
             </button>
 
             {/* Imagen del Producto en Modal */}
-            <div className="w-full md:w-1/2 h-64 md:h-auto min-h-[300px] relative bg-warm-950">
+            <div className="w-full md:w-1/2 h-48 sm:h-64 md:h-auto min-h-[200px] md:min-h-[350px] relative bg-warm-950">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={selectedProduct.imageUrl}

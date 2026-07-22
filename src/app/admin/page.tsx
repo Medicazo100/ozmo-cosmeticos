@@ -340,25 +340,43 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-black text-white font-sans flex flex-col md:flex-row">
       {/* Sidebar de Navegación */}
-      <aside className="w-full md:w-64 bg-warm-950 border-b md:border-b-0 md:border-r border-warm-900 flex flex-col justify-between py-6 px-4 shrink-0">
+      <aside className="w-full md:w-64 bg-warm-950 border-b md:border-b-0 md:border-r border-warm-900 flex flex-col justify-between py-4 md:py-6 px-4 shrink-0">
         <div>
-          <div className="px-2 mb-8 text-center md:text-left">
-            <h1 className="text-2xl font-serif text-mixed-gradient font-bold tracking-widest">
-              OZMO
-            </h1>
-            <span className="text-[10px] text-rose-400 font-semibold uppercase tracking-widest block">ADMIN PANEL</span>
+          <div className="px-2 mb-4 md:mb-8 text-center md:text-left flex flex-row md:flex-col justify-between items-center md:items-start gap-4">
+            <div>
+              <h1 className="text-xl md:text-2xl font-serif text-mixed-gradient font-bold tracking-widest">
+                OZMO
+              </h1>
+              <span className="text-[9px] md:text-[10px] text-rose-400 font-semibold uppercase tracking-widest block">ADMIN PANEL</span>
+            </div>
+            
+            {/* Botones de acción rápida en versión móvil */}
+            <div className="flex md:hidden gap-2">
+              <Link
+                href="/"
+                className="py-1.5 px-3 rounded-lg border border-warm-800 text-warm-300 hover:text-white text-[10px] font-semibold uppercase tracking-wider transition-all"
+              >
+                Tienda
+              </Link>
+              <button
+                onClick={() => setIsAuthenticated(false)}
+                className="py-1.5 px-3 rounded-lg bg-red-950/20 hover:bg-red-900/20 text-red-400 border border-red-950/50 text-[10px] font-semibold uppercase tracking-wider transition-all cursor-pointer"
+              >
+                Salir
+              </button>
+            </div>
           </div>
 
-          <nav className="space-y-1">
+          <nav className="flex flex-row md:flex-col overflow-x-auto gap-2 md:gap-1 md:space-y-1 pb-2 md:pb-0 scrollbar-none">
             <button
               onClick={() => { setActiveTab("pedidos"); resetProductForm(); }}
-              className={`w-full text-left py-3 px-4 rounded-xl text-xs uppercase tracking-widest font-semibold flex items-center gap-3 transition-colors cursor-pointer ${
+              className={`whitespace-nowrap md:w-full text-left py-2 md:py-3 px-3 md:px-4 rounded-xl text-[10px] md:text-xs uppercase tracking-widest font-semibold flex items-center gap-2 md:gap-3 transition-colors cursor-pointer shrink-0 ${
                 activeTab === "pedidos"
                   ? "bg-rose-500 text-white"
                   : "text-warm-300 hover:bg-warm-900/50 hover:text-white"
               }`}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
               </svg>
               Pedidos ({orders.length})
@@ -366,13 +384,13 @@ export default function AdminPage() {
 
             <button
               onClick={() => { setActiveTab("productos"); }}
-              className={`w-full text-left py-3 px-4 rounded-xl text-xs uppercase tracking-widest font-semibold flex items-center gap-3 transition-colors cursor-pointer ${
+              className={`whitespace-nowrap md:w-full text-left py-2 md:py-3 px-3 md:px-4 rounded-xl text-[10px] md:text-xs uppercase tracking-widest font-semibold flex items-center gap-2 md:gap-3 transition-colors cursor-pointer shrink-0 ${
                 activeTab === "productos"
                   ? "bg-rose-500 text-white"
                   : "text-warm-300 hover:bg-warm-900/50 hover:text-white"
               }`}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 11m8 4V5" />
               </svg>
               Inventario ({products.length})
@@ -380,13 +398,13 @@ export default function AdminPage() {
 
             <button
               onClick={() => { setActiveTab("ajustes"); resetProductForm(); }}
-              className={`w-full text-left py-3 px-4 rounded-xl text-xs uppercase tracking-widest font-semibold flex items-center gap-3 transition-colors cursor-pointer ${
+              className={`whitespace-nowrap md:w-full text-left py-2 md:py-3 px-3 md:px-4 rounded-xl text-[10px] md:text-xs uppercase tracking-widest font-semibold flex items-center gap-2 md:gap-3 transition-colors cursor-pointer shrink-0 ${
                 activeTab === "ajustes"
                   ? "bg-rose-500 text-white"
                   : "text-warm-300 hover:bg-warm-900/50 hover:text-white"
               }`}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
@@ -395,7 +413,8 @@ export default function AdminPage() {
           </nav>
         </div>
 
-        <div className="pt-6 border-t border-warm-900 mt-6 md:mt-0 flex flex-col gap-2">
+        {/* Botones al pie de página (sólo visibles en PC para evitar redundancia en móvil) */}
+        <div className="hidden md:flex pt-6 border-t border-warm-900 mt-6 md:mt-0 flex-col gap-2">
           <Link
             href="/"
             className="w-full text-center py-2 px-4 rounded-xl border border-warm-800 text-warm-300 hover:text-white hover:border-rose-500/30 text-xs font-semibold uppercase tracking-wider transition-all"
