@@ -198,7 +198,15 @@ export default function AdminPage() {
       alert(editingProduct ? "Producto actualizado exitosamente." : "Producto agregado exitosamente.");
     } catch (error: any) {
       console.error("Error saving product in Supabase:", error);
-      alert("Error al guardar el producto: " + error.message);
+      if (error.message && error.message.includes("Failed to fetch")) {
+        alert(
+          "Error de conexión al guardar el producto (Failed to fetch).\n\n" +
+          "Esto ocurre comúnmente en PC cuando un bloqueador de anuncios (AdBlocker), extensión de privacidad o Brave Shield bloquea el tráfico hacia Supabase.\n\n" +
+          "Por favor, desactiva tu AdBlocker o Brave Shield para este sitio y recarga la página."
+        );
+      } else {
+        alert("Error al guardar el producto: " + error.message);
+      }
     }
   };
 
@@ -214,7 +222,15 @@ export default function AdminPage() {
         alert("Producto eliminado exitosamente.");
       } catch (error: any) {
         console.error("Error deleting product from Supabase:", error);
-        alert("Error al eliminar el producto: " + error.message);
+        if (error.message && error.message.includes("Failed to fetch")) {
+          alert(
+            "Error de conexión al eliminar el producto (Failed to fetch).\n\n" +
+            "Esto ocurre comúnmente en PC cuando un bloqueador de anuncios (AdBlocker) o Brave Shield bloquea la conexión con la base de datos de Supabase.\n\n" +
+            "Por favor, desactiva tu AdBlocker o Brave Shield para este sitio y recarga la página."
+          );
+        } else {
+          alert("Error al eliminar el producto: " + error.message);
+        }
       }
     }
   };
@@ -229,7 +245,15 @@ export default function AdminPage() {
       alert("Venta presencial registrada correctamente. Stock decrementado en 1.");
     } catch (error: any) {
       console.error("Error registering presencial sale in Supabase:", error);
-      alert("Error al registrar venta presencial: " + error.message);
+      if (error.message && error.message.includes("Failed to fetch")) {
+        alert(
+          "Error de conexión al registrar la venta (Failed to fetch).\n\n" +
+          "Esto ocurre comúnmente en PC cuando un bloqueador de anuncios (AdBlocker) o Brave Shield bloquea la conexión con la base de datos de Supabase.\n\n" +
+          "Por favor, desactiva tu AdBlocker o Brave Shield para este sitio y recarga la página."
+        );
+      } else {
+        alert("Error al registrar venta presencial: " + error.message);
+      }
     }
   };
 
@@ -488,9 +512,9 @@ export default function AdminPage() {
                               : "bg-amber-950/80 text-amber-300 border-amber-800/35"
                           }`}
                         >
-                          <option value="Pendiente" className="bg-[#0c0c0c]">Pendiente</option>
-                          <option value="Confirmado" className="bg-[#0c0c0c]">Confirmado (Resta Stock)</option>
-                          <option value="Cancelado" className="bg-[#0c0c0c]">Cancelado (Devuelve Stock)</option>
+                          <option value="Pendiente" className="bg-[#0c0c0c] text-white font-sans">Pendiente</option>
+                          <option value="Confirmado" className="bg-[#0c0c0c] text-white font-sans">Confirmado (Resta Stock)</option>
+                          <option value="Cancelado" className="bg-[#0c0c0c] text-white font-sans">Cancelado (Devuelve Stock)</option>
                         </select>
                       </div>
                     </div>
@@ -634,9 +658,9 @@ export default function AdminPage() {
                       onChange={(e) => setProdCategory(e.target.value as any)}
                       className="w-full px-4 py-3 bg-warm-950 border border-warm-800 rounded-xl text-sm focus:outline-none focus:border-rose-500 text-white cursor-pointer"
                     >
-                      <option value="Árabes">Árabes</option>
-                      <option value="Comerciales">Comerciales</option>
-                      <option value="Niche">Niche</option>
+                      <option value="Árabes" className="bg-[#0c0c0c] text-white font-sans">Árabes</option>
+                      <option value="Comerciales" className="bg-[#0c0c0c] text-white font-sans">Comerciales</option>
+                      <option value="Niche" className="bg-[#0c0c0c] text-white font-sans">Niche</option>
                     </select>
                   </div>
 
