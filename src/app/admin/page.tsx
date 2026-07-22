@@ -14,7 +14,7 @@ export default function AdminPage() {
   const [authError, setAuthError] = useState("");
 
   // Datos Supabase Realtime
-  const { products } = useProductosRealtime();
+  const { products, setProducts } = useProductosRealtime();
   const [orders, setOrders] = useState<Order[]>([]);
 
   // Limpieza inicial automatizada de pedidos antiguos una única vez
@@ -167,7 +167,14 @@ export default function AdminPage() {
       return;
     }
 
+    const productId = editingProduct?.id ?? (
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `product-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    );
+
     const dbProd = {
+      id: productId,
       nombre: prodName,
       marca: prodBrand,
       precio: Number(prodPrice),
@@ -179,6 +186,24 @@ export default function AdminPage() {
       notas_salida: prodTopNotes,
       notas_corazon: prodHeartNotes,
       notas_fondo: prodBaseNotes
+    };
+
+    const localProduct: Product = {
+      id: productId,
+      name: prodName,
+      brand: prodBrand,
+      price: Number(prodPrice),
+      originalPrice: prodOriginalPrice,
+      stock: Number(prodStock),
+      imageUrl: prodImageUrl,
+      description: prodDescription,
+      category: prodCategory,
+      notes: {
+        top: prodTopNotes,
+        heart: prodHeartNotes,
+        base: prodBaseNotes,
+      },
+      featured: false,
     };
 
     try {
@@ -194,6 +219,13 @@ export default function AdminPage() {
           .insert([dbProd]);
         if (error) throw error;
       }
+      // Realtime puede estar deshabilitado en el proyecto o bloqueado en PC;
+      // reflejar el cambio localmente evita que el alta parezca fallida.
+      db.saveProduct(localProduct);
+      setProducts((current) => editingProduct
+        ? current.map((product) => product.id === productId ? localProduct : product)
+        : [...current.filter((product) => product.id !== productId), localProduct]
+      );
       resetProductForm();
       alert(editingProduct ? "Producto actualizado exitosamente." : "Producto agregado exitosamente.");
     } catch (error: any) {
@@ -219,6 +251,8 @@ export default function AdminPage() {
           .delete()
           .eq('id', productId);
         if (error) throw error;
+        db.deleteProduct(productId);
+        setProducts((current) => current.filter((product) => product.id !== productId));
         alert("Producto eliminado exitosamente.");
       } catch (error: any) {
         console.error("Error deleting product from Supabase:", error);
@@ -300,16 +334,17 @@ export default function AdminPage() {
                 <button
                   type="button"
                   onClick={() => setShowLoginPassword(!showLoginPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-warm-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-warm-900/50 transition-all cursor-pointer flex items-center justify-center"
+                  className="password-toggle absolute right-3 top-1/2 -translate-y-1/2 text-warm-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-warm-900/50 transition-all cursor-pointer flex items-center justify-center"
                   title={showLoginPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                   aria-label={showLoginPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  aria-pressed={showLoginPassword}
                 >
                   {showLoginPassword ? (
-                    <svg className="w-5 h-5 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="password-toggle-icon w-5 h-5 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
                     </svg>
                   ) : (
-                    <svg className="w-5 h-5 text-warm-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="password-toggle-icon w-5 h-5 text-warm-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                     </svg>
@@ -398,13 +433,13 @@ export default function AdminPage() {
 
             <button
               onClick={() => { setActiveTab("ajustes"); resetProductForm(); }}
-              className={`whitespace-nowrap md:w-full text-left py-2 md:py-3 px-3 md:px-4 rounded-xl text-[10px] md:text-xs uppercase tracking-widest font-semibold flex items-center gap-2 md:gap-3 transition-colors cursor-pointer shrink-0 ${
+              className={`settings-nav-button whitespace-nowrap md:w-full text-left py-2 md:py-3 px-3 md:px-4 rounded-xl text-[10px] md:text-xs uppercase tracking-widest font-semibold flex items-center gap-2 md:gap-3 transition-colors cursor-pointer shrink-0 ${
                 activeTab === "ajustes"
                   ? "bg-rose-500 text-white"
                   : "text-warm-300 hover:bg-warm-900/50 hover:text-white"
               }`}
             >
-              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="settings-nav-icon w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
@@ -523,7 +558,7 @@ export default function AdminPage() {
                         <select
                           value={order.status}
                           onChange={(e) => handleStatusChange(order.id, e.target.value as any)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold font-sans uppercase focus:outline-none border border-transparent cursor-pointer ${
+                          className={`admin-select appearance-none px-3 py-1.5 pr-8 rounded-lg text-xs font-bold font-sans uppercase focus:outline-none cursor-pointer ${
                             order.status === "Confirmado"
                               ? "bg-green-950/80 text-green-300 border-green-700/35"
                               : order.status === "Cancelado"
@@ -675,7 +710,7 @@ export default function AdminPage() {
                     <select
                       value={prodCategory}
                       onChange={(e) => setProdCategory(e.target.value as any)}
-                      className="w-full px-4 py-3 bg-warm-950 border border-warm-800 rounded-xl text-sm focus:outline-none focus:border-rose-500 text-white cursor-pointer"
+                      className="admin-select appearance-none w-full px-4 py-3 pr-10 bg-warm-950 border border-warm-800 rounded-xl text-sm focus:outline-none focus:border-rose-500 text-white cursor-pointer"
                     >
                       <option value="Árabes" className="bg-[#0c0c0c] text-white font-sans">Árabes</option>
                       <option value="Comerciales" className="bg-[#0c0c0c] text-white font-sans">Comerciales</option>
@@ -966,15 +1001,17 @@ export default function AdminPage() {
                   <button
                     type="button"
                     onClick={() => setShowSettingsPassword(!showSettingsPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-warm-400 hover:text-rose-400 transition-colors cursor-pointer p-1"
+                    className="password-toggle absolute right-3 top-1/2 -translate-y-1/2 text-warm-400 hover:text-rose-400 transition-all cursor-pointer p-1"
                     title={showSettingsPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    aria-label={showSettingsPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    aria-pressed={showSettingsPassword}
                   >
                     {showSettingsPassword ? (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="password-toggle-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
                       </svg>
                     ) : (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="password-toggle-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                       </svg>

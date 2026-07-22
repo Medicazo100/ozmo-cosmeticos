@@ -2,22 +2,57 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Product, SEED_PRODUCTS } from '@/lib/db';
 
+type ProductCategory = Product['category'];
+
+export type SupabaseProductRow = {
+  id: string;
+  nombre: string;
+  marca: string;
+  precio: number | string;
+  precio_original: number | string | null;
+  stock: number | string;
+  imagen_url: string | null;
+  descripcion: string | null;
+  categoria: string | null;
+  notas_salida: string | null;
+  notas_corazon: string | null;
+  notas_fondo: string | null;
+};
+
+function normalizeCategory(value: unknown): ProductCategory {
+  const category = String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z]/g, '');
+
+  if (category.includes('arabe') || category.includes('rabes')) return 'Árabes';
+  if (category.includes('niche')) return 'Niche';
+  return 'Comerciales';
+}
+
+const cloneProducts = (products: Product[]) =>
+  products.map((product) => ({
+    ...product,
+    notes: { ...product.notes },
+  }));
+
 // Helper para mapear columnas snake_case de Postgres a propiedades camelCase de TypeScript
-export const mapDbProductToApp = (p: any): Product => ({
+export const mapDbProductToApp = (p: SupabaseProductRow): Product => ({
   id: p.id,
   name: p.nombre,
   brand: p.marca,
   price: Number(p.precio),
-  originalPrice: p.precio_original ? Number(p.precio_original) : undefined,
+  originalPrice: p.precio_original === null ? undefined : Number(p.precio_original),
   stock: Number(p.stock),
-  imageUrl: p.imagen_url,
+  imageUrl: p.imagen_url || '',
   description: p.descripcion || '',
   notes: {
     top: p.notas_salida || '',
     heart: p.notas_corazon || '',
-    base: p.notas_fondo || ''
+    base: p.notas_fondo || '',
   },
-  category: p.categoria as any,
+  category: normalizeCategory(p.categoria),
   featured: false
 });
 
@@ -48,11 +83,9 @@ export async function seedSupabaseProducts() {
 }
 
 export function useProductosRealtime() {
-  // CRITICAL FIX: Inicializar SIEMPRE con SEED_PRODUCTS directamente.
-  // Esto garantiza que tanto el render del servidor (SSG) como el cliente
-  // arranquen con 8 productos, eliminando el mismatch de hidratacion
-  // que causaba inventario vacio en PC.
-  const [products, setProducts] = useState<Product[]>(SEED_PRODUCTS);
+  // El catálogo debe tener contenido útil aunque Supabase tarde, esté vacío o
+  // no sea accesible desde un navegador de escritorio.
+  const [products, setProducts] = useState<Product[]>(() => cloneProducts(SEED_PRODUCTS));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,20 +104,18 @@ export function useProductosRealtime() {
 
         if (fetchError) throw fetchError;
 
-        if (!cancelled) {
-          if (data && data.length > 0) {
-            setProducts(data.map(mapDbProductToApp));
-          } else {
-            // Supabase está vacío: sembrar productos automáticamente
-            await seedSupabaseProducts();
-            setProducts(SEED_PRODUCTS);
-          }
+        if (!cancelled && data && data.length > 0) {
+          setProducts(data.map(mapDbProductToApp));
+        } else if (!cancelled) {
+          // Pintar primero; la siembra remota no debe bloquear el catálogo.
+          setProducts((current) => current.length > 0 ? current : cloneProducts(SEED_PRODUCTS));
+          void seedSupabaseProducts();
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error fetching products from Supabase:', err);
         if (!cancelled) {
-          setError(err.message || 'Error al cargar productos');
-          setProducts(SEED_PRODUCTS);
+          setError(err instanceof Error ? err.message : 'Error al cargar productos');
+          setProducts((current) => current.length > 0 ? current : cloneProducts(SEED_PRODUCTS));
         }
       } finally {
         if (!cancelled) {
@@ -109,13 +140,13 @@ export function useProductosRealtime() {
           const { eventType, new: newRow, old: oldRow } = payload;
 
           if (eventType === 'INSERT' && newRow) {
-            const mapped = mapDbProductToApp(newRow);
+            const mapped = mapDbProductToApp(newRow as SupabaseProductRow);
             setProducts((current) => {
               if (current.some((p) => p.id === mapped.id)) return current;
               return [...current, mapped];
             });
           } else if (eventType === 'UPDATE' && newRow) {
-            const mapped = mapDbProductToApp(newRow);
+            const mapped = mapDbProductToApp(newRow as SupabaseProductRow);
             setProducts((current) =>
               current.map((p) => (p.id === mapped.id ? mapped : p))
             );

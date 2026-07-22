@@ -70,13 +70,19 @@ export default function CatalogPage() {
 
   // Cargar carrito desde localStorage una vez montado el componente (client-side only)
   useEffect(() => {
+    let cancelled = false;
     try {
       const savedCart = localStorage.getItem("ozmo_cosmeticos_cart") || localStorage.getItem("perfumazo_cart");
-      if (savedCart) setCart(JSON.parse(savedCart));
+      Promise.resolve().then(() => {
+        if (!cancelled && savedCart) setCart(JSON.parse(savedCart));
+      });
     } catch (e) {
       console.error("Error cargando el carrito", e);
     }
-    setCartHydrated(true);
+    Promise.resolve().then(() => {
+      if (!cancelled) setCartHydrated(true);
+    });
+    return () => { cancelled = true; };
   }, []);
 
   // Guardar carrito en localStorage cuando cambie (solo después de hidratar)

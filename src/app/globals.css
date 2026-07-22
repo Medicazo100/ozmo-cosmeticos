@@ -120,3 +120,44 @@ body {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
+
+/* Controles del panel administrativo: el menú nativo de escritorio no
+   siempre respeta las clases de cada <option>, por eso se fija el contraste
+   también en el control y en su paleta del sistema. */
+.admin-select {
+  color: #ffffff;
+  background-color: #1c1c1a;
+  color-scheme: dark;
+}
+
+.admin-select option {
+  color: #ffffff;
+  background-color: #0c0c0c;
+  font-family: var(--font-inter), sans-serif;
+}
+
+.password-toggle {
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+}
+
+.password-toggle-icon {
+  transform-origin: center;
+  transition: transform 180ms ease, opacity 180ms ease;
+}
+
+.password-toggle:hover .password-toggle-icon,
+.password-toggle:focus-visible .password-toggle-icon {
+  transform: scale(1.14) rotate(-4deg);
+}
+
+.settings-nav-button:hover .settings-nav-icon,
+.settings-nav-button:focus-visible .settings-nav-icon {
+  animation: settingsIconWiggle 550ms ease-in-out;
+}
+
+@keyframes settingsIconWiggle {
+  0%, 100% { transform: rotate(0deg); }
+  35% { transform: rotate(-12deg); }
+  70% { transform: rotate(12deg); }
+}
