@@ -21,17 +21,28 @@ export const mapDbProductToApp = (p: any): Product => ({
   featured: false
 });
 
+// Obtener productos semilla/local de forma síncrona para el primer render
+function getInitialProducts(): Product[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    return db.getProducts();
+  } catch {
+    return [];
+  }
+}
+
 export function useProductosRealtime() {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>(getInitialProducts);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Carga síncrona/inicial desde LocalStorage/Seed para visualización inmediata
-    const initialLocal = db.getProducts();
-    if (initialLocal.length > 0) {
-      setProducts(initialLocal);
-    }
+    // Si por alguna razón el estado quedó vacío, rellenamos
+    setProducts(prev => {
+      if (prev.length > 0) return prev;
+      const local = db.getProducts();
+      return local.length > 0 ? local : prev;
+    });
 
     // 1. Fetch inicial de productos desde Supabase
     const fetchProductos = async () => {

@@ -55,10 +55,15 @@ export default function AdminPage() {
   const [prodStock, setProdStock] = useState(0);
   const [prodCategory, setProdCategory] = useState<'Árabes' | 'Comerciales' | 'Niche'>("Comerciales");
   const [prodImageUrl, setProdImageUrl] = useState("");
+  const [prodImageSource, setProdImageSource] = useState<'url' | 'file'>('url');
   const [prodDescription, setProdDescription] = useState("");
   const [prodTopNotes, setProdTopNotes] = useState("");
   const [prodHeartNotes, setProdHeartNotes] = useState("");
   const [prodBaseNotes, setProdBaseNotes] = useState("");
+
+  // Visibilidad de contraseñas
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showSettingsPassword, setShowSettingsPassword] = useState(false);
 
   // Manejo de Inicio de Sesión
   const handleLogin = (e: React.FormEvent) => {
@@ -101,6 +106,20 @@ export default function AdminPage() {
     reader.readAsDataURL(file);
   };
 
+  // Subir imagen de producto desde el dispositivo
+  const handleProductImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === 'string') {
+        setProdImageUrl(reader.result as string);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Cargar producto en formulario para edición
   const startEditProduct = (product: Product) => {
     setEditingProduct(product);
@@ -128,6 +147,7 @@ export default function AdminPage() {
     setProdStock(0);
     setProdCategory("Comerciales");
     setProdImageUrl("");
+    setProdImageSource('url');
     setProdDescription("");
     setProdTopNotes("");
     setProdHeartNotes("");
@@ -138,8 +158,12 @@ export default function AdminPage() {
   // Guardar o Actualizar Producto en Supabase
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!prodName || !prodBrand || prodPrice <= 0 || prodStock < 0 || !prodImageUrl || !prodDescription) {
+    if (!prodName || !prodBrand || prodPrice <= 0 || prodStock < 0 || !prodDescription) {
       alert("Por favor completa los campos obligatorios.");
+      return;
+    }
+    if (!prodImageUrl) {
+      alert("Por favor proporciona una imagen del producto (URL o archivo).");
       return;
     }
 
@@ -239,15 +263,34 @@ export default function AdminPage() {
               <label className="block text-xs uppercase tracking-widest text-warm-400 font-semibold mb-2">
                 Contraseña de Administrador
               </label>
-              <input
-                type="password"
-                required
-                value={passwordInput}
-                onChange={(e) => setPasswordInput(e.target.value)}
-                placeholder="Ingresa la contraseña"
-                className="w-full px-4 py-3 bg-warm-950 border border-warm-800 rounded-xl focus:outline-none focus:border-rose-500 text-center font-mono text-white tracking-widest"
-                autoFocus
-              />
+              <div className="relative">
+                <input
+                  type={showLoginPassword ? "text" : "password"}
+                  required
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  placeholder="Ingresa la contraseña"
+                  className="w-full px-4 py-3 pr-12 bg-warm-950 border border-warm-800 rounded-xl focus:outline-none focus:border-rose-500 text-center font-mono text-white tracking-widest"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowLoginPassword(!showLoginPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-warm-400 hover:text-rose-400 transition-colors cursor-pointer p-1"
+                  title={showLoginPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                  {showLoginPassword ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
               {authError && <p className="text-red-400 text-xs mt-2 text-center">{authError}</p>}
             </div>
 
@@ -596,15 +639,79 @@ export default function AdminPage() {
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-xs uppercase tracking-widest text-warm-400 font-semibold mb-2">URL de Imagen del Producto *</label>
-                    <input
-                      type="url"
-                      required
-                      value={prodImageUrl}
-                      onChange={(e) => setProdImageUrl(e.target.value)}
-                      placeholder="Ej. https://images.unsplash.com/... (URL de la foto)"
-                      className="w-full px-4 py-3 bg-warm-950 border border-warm-800 rounded-xl text-sm focus:outline-none focus:border-rose-500 text-white"
-                    />
+                    <label className="block text-xs uppercase tracking-widest text-warm-400 font-semibold mb-2">Imagen del Producto *</label>
+                    
+                    {/* Selector de fuente de imagen */}
+                    <div className="flex items-center gap-4 mb-3">
+                      <button
+                        type="button"
+                        onClick={() => { setProdImageSource('url'); }}
+                        className={`py-1.5 px-3 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+                          prodImageSource === 'url'
+                            ? 'bg-rose-500 text-white'
+                            : 'bg-warm-950 border border-warm-800 text-warm-300 hover:text-white hover:border-rose-500/30'
+                        }`}
+                      >
+                        🔗 Enlace URL
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setProdImageSource('file'); }}
+                        className={`py-1.5 px-3 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+                          prodImageSource === 'file'
+                            ? 'bg-rose-500 text-white'
+                            : 'bg-warm-950 border border-warm-800 text-warm-300 hover:text-white hover:border-rose-500/30'
+                        }`}
+                      >
+                        📷 Subir desde Dispositivo
+                      </button>
+                    </div>
+
+                    {prodImageSource === 'url' ? (
+                      <input
+                        type="url"
+                        value={prodImageUrl.startsWith('data:') ? '' : prodImageUrl}
+                        onChange={(e) => setProdImageUrl(e.target.value)}
+                        placeholder="Ej. https://images.unsplash.com/... (URL de la foto)"
+                        className="w-full px-4 py-3 bg-warm-950 border border-warm-800 rounded-xl text-sm focus:outline-none focus:border-rose-500 text-white"
+                      />
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <label
+                            htmlFor="prod-image-upload"
+                            className="py-2.5 px-4 bg-warm-950 border border-warm-850 hover:border-rose-500/30 hover:text-white rounded-xl text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer inline-block"
+                          >
+                            Seleccionar Imagen
+                          </label>
+                          <input
+                            type="file"
+                            id="prod-image-upload"
+                            accept="image/*"
+                            onChange={handleProductImageUpload}
+                            className="hidden"
+                          />
+                          <span className="text-xs text-warm-450 truncate max-w-[200px]">
+                            {prodImageUrl.startsWith('data:image') ? '✅ Imagen cargada' : 'Ningún archivo seleccionado'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Vista previa de imagen del producto */}
+                    {prodImageUrl && (
+                      <div className="mt-3">
+                        <span className="block text-[10px] uppercase tracking-widest text-warm-500 mb-2">Vista Previa</span>
+                        <div className="h-28 w-28 rounded-xl overflow-hidden bg-warm-950 border border-warm-850">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={prodImageUrl}
+                            alt="Vista previa del producto"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="md:col-span-2">
@@ -803,13 +910,32 @@ export default function AdminPage() {
                 <label className="block text-xs uppercase tracking-widest text-warm-400 font-semibold mb-2">
                   Nueva Contraseña de Administrador (Opcional)
                 </label>
-                <input
-                  type="password"
-                  value={settings.adminPassword || ""}
-                  onChange={(e) => setSettings({ ...settings, adminPassword: e.target.value })}
-                  placeholder="Dejar vacío para conservar la contraseña actual"
-                  className="w-full px-4 py-3 bg-warm-950 border border-warm-800 rounded-xl text-sm focus:outline-none focus:border-rose-500 text-white font-mono"
-                />
+                <div className="relative">
+                  <input
+                    type={showSettingsPassword ? "text" : "password"}
+                    value={settings.adminPassword || ""}
+                    onChange={(e) => setSettings({ ...settings, adminPassword: e.target.value })}
+                    placeholder="Dejar vacío para conservar la contraseña actual"
+                    className="w-full px-4 py-3 pr-12 bg-warm-950 border border-warm-800 rounded-xl text-sm focus:outline-none focus:border-rose-500 text-white font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowSettingsPassword(!showSettingsPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-warm-400 hover:text-rose-400 transition-colors cursor-pointer p-1"
+                    title={showSettingsPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  >
+                    {showSettingsPassword ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
                 <span className="text-[10px] text-warm-500 mt-1 block">
                   Si dejas este campo vacío, la contraseña actual no cambiará.
                 </span>
