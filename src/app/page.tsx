@@ -60,10 +60,10 @@ export default function CatalogPage() {
       }
     }
 
-    // Duración de Splash Screen
+    // Duración de Splash Screen (rápida para abrir directamente la tienda)
     const timer = setTimeout(() => {
       setShowSplash(false);
-    }, 2500);
+    }, 1200);
 
     return () => clearTimeout(timer);
   }, []);

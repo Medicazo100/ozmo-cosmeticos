@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Product, db } from '@/lib/db';
+import { Product, SEED_PRODUCTS } from '@/lib/db';
 
 // Helper para mapear columnas snake_case de Postgres a propiedades camelCase de TypeScript
 export const mapDbProductToApp = (p: any): Product => ({
@@ -21,68 +21,87 @@ export const mapDbProductToApp = (p: any): Product => ({
   featured: false
 });
 
-// Obtener productos semilla/local de forma síncrona para el primer render
-function getInitialProducts(): Product[] {
-  if (typeof window === 'undefined') return [];
+// Función para sembrar Supabase con los 8 productos iniciales de fábrica
+export async function seedSupabaseProducts() {
   try {
-    return db.getProducts();
-  } catch {
-    return [];
+    const dbRows = SEED_PRODUCTS.map(p => ({
+      id: p.id,
+      nombre: p.name,
+      marca: p.brand,
+      precio: p.price,
+      precio_original: p.originalPrice || null,
+      stock: p.stock,
+      imagen_url: p.imageUrl,
+      descripcion: p.description,
+      categoria: p.category,
+      notas_salida: p.notes.top,
+      notas_corazon: p.notes.heart,
+      notas_fondo: p.notes.base
+    }));
+    const { error } = await supabase.from('productos').upsert(dbRows, { onConflict: 'id' });
+    if (error) {
+      console.error('Error seeding Supabase:', error);
+    }
+  } catch (e) {
+    console.error('Exception seeding Supabase:', e);
   }
 }
 
 export function useProductosRealtime() {
-  const [products, setProducts] = useState<Product[]>(getInitialProducts);
+  // CRITICAL FIX: Inicializar SIEMPRE con SEED_PRODUCTS directamente.
+  // Esto garantiza que tanto el render del servidor (SSG) como el cliente
+  // arranquen con 8 productos, eliminando el mismatch de hidratacion
+  // que causaba inventario vacio en PC.
+  const [products, setProducts] = useState<Product[]>(SEED_PRODUCTS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Si por alguna razón el estado quedó vacío, rellenamos
-    setProducts(prev => {
-      if (prev.length > 0) return prev;
-      const local = db.getProducts();
-      return local.length > 0 ? local : prev;
-    });
+    let cancelled = false;
 
-    // 1. Fetch inicial de productos desde Supabase
+    // Fetch productos desde Supabase - si tiene datos, reemplaza los seed
     const fetchProductos = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
+        const { data, error: fetchError } = await supabase
           .from('productos')
           .select('*')
           .order('marca', { ascending: true })
           .order('nombre', { ascending: true });
 
-        if (error) throw error;
+        if (fetchError) throw fetchError;
 
-        if (data && data.length > 0) {
-          setProducts(data.map(mapDbProductToApp));
-        } else {
-          // Si la respuesta de Supabase está vacía, aseguramos productos semilla
-          const seed = db.getProducts();
-          if (seed.length > 0) setProducts(seed);
+        if (!cancelled) {
+          if (data && data.length > 0) {
+            setProducts(data.map(mapDbProductToApp));
+          } else {
+            // Supabase está vacío: sembrar productos automáticamente
+            await seedSupabaseProducts();
+            setProducts(SEED_PRODUCTS);
+          }
         }
       } catch (err: any) {
         console.error('Error fetching products from Supabase:', err);
-        setError(err.message || 'Error al cargar productos');
-        // Fallback a semillas/local
-        const seed = db.getProducts();
-        if (seed.length > 0) setProducts(seed);
+        if (!cancelled) {
+          setError(err.message || 'Error al cargar productos');
+          setProducts(SEED_PRODUCTS);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     fetchProductos();
 
-    // 2. Habilitar canal de suscripción en tiempo real
+    // Habilitar canal de suscripcion en tiempo real
     const channel = supabase
       .channel('cambios-stock')
       .on(
         'postgres_changes',
         {
-          event: '*', // UPDATE, INSERT, DELETE
+          event: '*',
           schema: 'public',
           table: 'productos'
         },
@@ -109,8 +128,8 @@ export function useProductosRealtime() {
       )
       .subscribe();
 
-    // Limpieza de canal al desmontar el Hook
     return () => {
+      cancelled = true;
       supabase.removeChannel(channel);
     };
   }, []);

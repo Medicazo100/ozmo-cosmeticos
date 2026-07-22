@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { db, Product, Order, Settings } from "@/lib/db";
 import { supabase } from "@/lib/supabaseClient";
-import { useProductosRealtime } from "@/hooks/useProductosRealtime";
+import { useProductosRealtime, seedSupabaseProducts } from "@/hooks/useProductosRealtime";
 
 export default function AdminPage() {
   // Autenticación
@@ -532,10 +532,11 @@ export default function AdminPage() {
               <h2 className="text-2xl font-serif font-bold">Inventario de Productos</h2>
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => {
-                    if (confirm("¿Estás seguro de que deseas restablecer todo el inventario local a los 8 perfumes predeterminados de fábrica?")) {
+                  onClick={async () => {
+                    if (confirm("¿Estás seguro de que deseas restablecer todo el inventario a los 8 perfumes predeterminados de fábrica en Supabase y localmente?")) {
                       db.resetProductsToSeed();
-                      alert("Inventario restablecido. La página se recargará.");
+                      await seedSupabaseProducts();
+                      alert("¡Inventario restablecido exitosamente a los 8 productos de fábrica!");
                       window.location.reload();
                     }
                   }}

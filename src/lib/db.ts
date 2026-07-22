@@ -49,10 +49,10 @@ const DEFAULT_SETTINGS: Settings = {
   heroImageUrl: "/hero_banner.png", // Imagen de portada principal autogenerada
 };
 
-const SEED_PRODUCTS: Product[] = [
+export const SEED_PRODUCTS: Product[] = [
   // --- ÁRABES (3) ---
   {
-    id: "1",
+    id: "11111111-1111-1111-1111-111111111111",
     name: "Club de Nuit Intense Man",
     brand: "Armaf",
     price: 1350,
@@ -69,7 +69,7 @@ const SEED_PRODUCTS: Product[] = [
     featured: true
   },
   {
-    id: "2",
+    id: "22222222-2222-2222-2222-222222222222",
     name: "Khamrah",
     brand: "Lattafa",
     price: 1250,
@@ -86,7 +86,7 @@ const SEED_PRODUCTS: Product[] = [
     featured: true
   },
   {
-    id: "3",
+    id: "33333333-3333-3333-3333-333333333333",
     name: "Yara",
     brand: "Lattafa",
     price: 1150,
@@ -104,7 +104,7 @@ const SEED_PRODUCTS: Product[] = [
   },
   // --- COMERCIALES (3) ---
   {
-    id: "4",
+    id: "44444444-4444-4444-4444-444444444444",
     name: "Sauvage Parfum",
     brand: "Dior",
     price: 2950,
@@ -120,7 +120,7 @@ const SEED_PRODUCTS: Product[] = [
     featured: true
   },
   {
-    id: "5",
+    id: "55555555-5555-5555-5555-555555555555",
     name: "Libre Intense",
     brand: "Yves Saint Laurent",
     price: 3100,
@@ -137,7 +137,7 @@ const SEED_PRODUCTS: Product[] = [
     featured: false
   },
   {
-    id: "6",
+    id: "66666666-6666-6666-6666-666666666666",
     name: "Bleu de Chanel",
     brand: "Chanel",
     price: 2850,
@@ -155,7 +155,7 @@ const SEED_PRODUCTS: Product[] = [
   },
   // --- NICHE (2) ---
   {
-    id: "7",
+    id: "77777777-7777-7777-7777-777777777777",
     name: "Baccarat Rouge 540",
     brand: "Maison Francis Kurkdjian",
     price: 6900,
@@ -171,7 +171,7 @@ const SEED_PRODUCTS: Product[] = [
     featured: true
   },
   {
-    id: "8",
+    id: "88888888-8888-8888-8888-888888888888",
     name: "Lost Cherry",
     brand: "Tom Ford",
     price: 5800,
