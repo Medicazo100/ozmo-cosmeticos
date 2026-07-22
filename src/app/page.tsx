@@ -14,7 +14,7 @@ function generateOrderId() {
 export default function CatalogPage() {
   // Estados de carga e interfaz
   const [showSplash, setShowSplash] = useState(true);
-  const { products } = useProductosRealtime();
+  const { products, loading } = useProductosRealtime();
   const [settings, setSettings] = useState<Settings>({
     whatsappNumber: "524535303820",
     storeName: "OZMO Cosméticos y Perfumes",
@@ -404,7 +404,21 @@ export default function CatalogPage() {
               </div>
 
               {/* Grid de Productos */}
-              {filteredProducts.length === 0 ? (
+              {loading && products.length === 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {[1, 2, 3, 4, 5, 6].map((n) => (
+                    <div key={n} className="bg-warm-900/20 border border-warm-900/40 rounded-2xl h-96 animate-pulse p-6 flex flex-col justify-between">
+                      <div className="w-full h-48 bg-warm-850/50 rounded-xl mb-4" />
+                      <div className="space-y-3">
+                        <div className="h-4 bg-warm-850/50 rounded w-1/3" />
+                        <div className="h-6 bg-warm-850/50 rounded w-2/3" />
+                        <div className="h-4 bg-warm-850/50 rounded w-full" />
+                      </div>
+                      <div className="h-10 bg-warm-850/50 rounded-xl mt-4" />
+                    </div>
+                  ))}
+                </div>
+              ) : filteredProducts.length === 0 ? (
                 <div className="text-center py-20 bg-warm-900/10 border border-warm-850 rounded-2xl">
                   <svg className="w-12 h-12 mx-auto text-warm-650 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

@@ -1,7 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Product } from '@/lib/db';
+import { Product, db } from '@/lib/db';
 
 // Helper para mapear columnas snake_case de Postgres a propiedades camelCase de TypeScript
 export const mapDbProductToApp = (p: any): Product => ({
@@ -28,7 +27,13 @@ export function useProductosRealtime() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // 1. Fetch inicial de productos
+    // Carga síncrona/inicial desde LocalStorage/Seed para visualización inmediata
+    const initialLocal = db.getProducts();
+    if (initialLocal.length > 0) {
+      setProducts(initialLocal);
+    }
+
+    // 1. Fetch inicial de productos desde Supabase
     const fetchProductos = async () => {
       try {
         setLoading(true);
@@ -40,12 +45,19 @@ export function useProductosRealtime() {
 
         if (error) throw error;
 
-        if (data) {
+        if (data && data.length > 0) {
           setProducts(data.map(mapDbProductToApp));
+        } else {
+          // Si la respuesta de Supabase está vacía, aseguramos productos semilla
+          const seed = db.getProducts();
+          if (seed.length > 0) setProducts(seed);
         }
       } catch (err: any) {
         console.error('Error fetching products from Supabase:', err);
         setError(err.message || 'Error al cargar productos');
+        // Fallback a semillas/local
+        const seed = db.getProducts();
+        if (seed.length > 0) setProducts(seed);
       } finally {
         setLoading(false);
       }
@@ -69,7 +81,6 @@ export function useProductosRealtime() {
           if (eventType === 'INSERT' && newRow) {
             const mapped = mapDbProductToApp(newRow);
             setProducts((current) => {
-              // Evitar duplicaciones por si acaso
               if (current.some((p) => p.id === mapped.id)) return current;
               return [...current, mapped];
             });
