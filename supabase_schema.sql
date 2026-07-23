@@ -173,3 +173,53 @@ VALUES
     'Bálsamo del Perú, Haba Tonka, Sándalo, Vetiver, Cedro'
 )
 ON CONFLICT (id) DO NOTHING;
+
+-- 5. Crear la tabla de configuración de la tienda (store_settings)
+CREATE TABLE IF NOT EXISTS public.store_settings (
+    id INT PRIMARY KEY DEFAULT 1,
+    store_name TEXT NOT NULL DEFAULT 'OZMO Cosméticos y Perfumes',
+    whatsapp_number TEXT NOT NULL DEFAULT '524535303820',
+    hero_image_url TEXT DEFAULT '/hero_banner.png',
+    admin_password TEXT DEFAULT 'admin',
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    CONSTRAINT single_row CHECK (id = 1)
+);
+
+-- Habilitar RLS en store_settings
+ALTER TABLE public.store_settings ENABLE ROW LEVEL SECURITY;
+
+-- Políticas de RLS para store_settings
+CREATE POLICY "Permitir lectura pública de store_settings" ON public.store_settings
+    FOR SELECT USING (true);
+
+CREATE POLICY "Permitir inserción pública de store_settings" ON public.store_settings
+    FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Permitir actualización de store_settings" ON public.store_settings
+    FOR UPDATE USING (true);
+
+-- Insertar configuración inicial por defecto
+INSERT INTO public.store_settings (id, store_name, whatsapp_number, hero_image_url, admin_password)
+VALUES (1, 'OZMO Cosméticos y Perfumes', '524535303820', '/hero_banner.png', 'admin')
+ON CONFLICT (id) DO NOTHING;
+
+-- Habilitar Realtime para store_settings
+ALTER PUBLICATION supabase_realtime ADD TABLE public.store_settings;
+
+-- 6. Configuración de Storage Bucket (store-assets) para logo / banners de tienda
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('store-assets', 'store-assets', true)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "Permitir lectura pública en store-assets"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'store-assets');
+
+CREATE POLICY "Permitir subida en store-assets"
+ON storage.objects FOR INSERT
+WITH CHECK (bucket_id = 'store-assets');
+
+CREATE POLICY "Permitir actualización en store-assets"
+ON storage.objects FOR UPDATE
+USING (bucket_id = 'store-assets');
+

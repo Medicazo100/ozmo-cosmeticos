@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { db, Product, Order, Settings } from "@/lib/db";
+import { db, Product, Order, Settings, SETTINGS_UPDATED_EVENT, fetchSettingsFromSupabase } from "@/lib/db";
 import { supabase } from "@/lib/supabaseClient";
 import { useProductosRealtime } from "@/hooks/useProductosRealtime";
 import QRModal from "@/components/QRModal";
@@ -23,8 +23,9 @@ export default function CatalogPage() {
 
   useEffect(() => {
     const loaded = db.getSettings();
-    Promise.resolve().then(() => {
-      setSettings(loaded);
+    setSettings(loaded);
+    fetchSettingsFromSupabase().then((remoteSettings) => {
+      setSettings(remoteSettings);
     });
   }, []);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
@@ -91,13 +92,58 @@ export default function CatalogPage() {
     localStorage.setItem("ozmo_cosmeticos_cart", JSON.stringify(cart));
   }, [cart, cartHydrated]);
 
-  // Recargar catálogo al enfocar la ventana (solo ajustes)
+  // Recargar catálogo al enfocar la ventana o cambio de ajustes (con Supabase Realtime)
   useEffect(() => {
-    const handleFocus = () => {
-      setSettings(db.getSettings());
+    const handleSettingsUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent<Settings>;
+      setSettings(customEvent.detail || db.getSettings());
     };
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === "ozmo_cosmeticos_settings" || event.key === "perfumazo_settings") {
+        setSettings(db.getSettings());
+      }
+    };
+    const handleFocus = () => setSettings(db.getSettings());
+
+    window.addEventListener(SETTINGS_UPDATED_EVENT, handleSettingsUpdate);
+    window.addEventListener("storage", handleStorage);
     window.addEventListener("focus", handleFocus);
-    return () => window.removeEventListener("focus", handleFocus);
+
+    // Suscripción Realtime a cambios en la tabla 'store_settings' de Supabase
+    const settingsChannel = supabase
+      .channel("cambios-store-settings")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "store_settings"
+        },
+        (payload) => {
+          console.log('[OZMO] Realtime: cambio detectado en store_settings:', payload.eventType);
+          if (payload.new) {
+            const newRow = payload.new as Record<string, any>;
+            const updatedSettings: Settings = {
+              storeName: newRow.store_name,
+              whatsappNumber: newRow.whatsapp_number,
+              heroImageUrl: newRow.hero_image_url,
+              adminPassword: newRow.admin_password,
+            };
+            const saved = db.saveSettings(updatedSettings);
+            setSettings(saved);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('[OZMO] Realtime store_settings canal:', status);
+      });
+
+    return () => {
+      window.removeEventListener(SETTINGS_UPDATED_EVENT, handleSettingsUpdate);
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("focus", handleFocus);
+      supabase.removeChannel(settingsChannel);
+    };
   }, []);
 
   // Agregar al carrito

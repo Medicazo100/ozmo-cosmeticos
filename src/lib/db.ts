@@ -1,3 +1,5 @@
+import { supabase } from './supabaseClient';
+
 export interface Product {
   id: string;
   name: string;
@@ -48,6 +50,30 @@ const DEFAULT_SETTINGS: Settings = {
   adminPassword: "admin", // Contraseña por defecto para desarrollo
   heroImageUrl: "/hero_banner.png", // Imagen de portada principal autogenerada
 };
+
+export const SETTINGS_STORAGE_KEY = 'ozmo_cosmeticos_settings';
+export const SETTINGS_UPDATED_EVENT = 'ozmo-settings-updated';
+
+function cloneDefaultSettings(): Settings {
+  return { ...DEFAULT_SETTINGS };
+}
+
+function normalizeSettings(value: unknown): Settings {
+  if (!value || typeof value !== 'object') return cloneDefaultSettings();
+
+  const parsed = value as Partial<Settings>;
+  const whatsappNumber = typeof parsed.whatsappNumber === 'string' ? parsed.whatsappNumber.trim() : '';
+  const storeName = typeof parsed.storeName === 'string' ? parsed.storeName.trim() : '';
+  const heroImageUrl = typeof parsed.heroImageUrl === 'string' ? parsed.heroImageUrl.trim() : '';
+  const adminPassword = typeof parsed.adminPassword === 'string' ? parsed.adminPassword : DEFAULT_SETTINGS.adminPassword;
+
+  return {
+    whatsappNumber: whatsappNumber && whatsappNumber !== "5215555555555" ? whatsappNumber : DEFAULT_SETTINGS.whatsappNumber,
+    storeName: storeName || DEFAULT_SETTINGS.storeName,
+    adminPassword: adminPassword || DEFAULT_SETTINGS.adminPassword,
+    heroImageUrl: heroImageUrl || DEFAULT_SETTINGS.heroImageUrl,
+  };
+}
 
 export const SEED_PRODUCTS: Product[] = [
   // --- ÁRABES (3) ---
@@ -195,38 +221,29 @@ const isClient = typeof window !== 'undefined';
 export const db = {
   // Ajustes
   getSettings(): Settings {
-    if (!isClient) return DEFAULT_SETTINGS;
+    if (!isClient) return cloneDefaultSettings();
     try {
-      const stored = localStorage.getItem('ozmo_cosmeticos_settings') || localStorage.getItem('perfumazo_settings');
+      const stored = localStorage.getItem(SETTINGS_STORAGE_KEY) || localStorage.getItem('perfumazo_settings');
       if (stored) {
-        const parsed = JSON.parse(stored);
-        // Migración automática
-        let changed = false;
-        if (parsed.whatsappNumber === "5215555555555" || !parsed.whatsappNumber) {
-          parsed.whatsappNumber = DEFAULT_SETTINGS.whatsappNumber;
-          changed = true;
-        }
-        if (!parsed.heroImageUrl) {
-          parsed.heroImageUrl = DEFAULT_SETTINGS.heroImageUrl;
-          changed = true;
-        }
-        if (changed) {
-          localStorage.setItem('ozmo_cosmeticos_settings', JSON.stringify(parsed));
-        }
+        const parsed = normalizeSettings(JSON.parse(stored));
         return parsed;
       }
-      return DEFAULT_SETTINGS;
+      return cloneDefaultSettings();
     } catch {
-      return DEFAULT_SETTINGS;
+      return cloneDefaultSettings();
     }
   },
 
-  saveSettings(settings: Settings): void {
-    if (!isClient) return;
+  saveSettings(settings: Settings): Settings {
+    if (!isClient) return cloneDefaultSettings();
     try {
-      localStorage.setItem('ozmo_cosmeticos_settings', JSON.stringify(settings));
+      const normalized = normalizeSettings(settings);
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(normalized));
+      window.dispatchEvent(new CustomEvent(SETTINGS_UPDATED_EVENT, { detail: normalized }));
+      return normalized;
     } catch (e) {
       console.error("Error saving settings", e);
+      throw new Error("No fue posible guardar los ajustes. Verifica el espacio disponible del navegador e inténtalo de nuevo.");
     }
   },
 
@@ -362,3 +379,150 @@ export const db = {
     }
   }
 };
+
+export async function fetchSettingsFromSupabase(): Promise<Settings> {
+  try {
+    const { data, error } = await supabase
+      .from('store_settings')
+      .select('*')
+      .eq('id', 1)
+      .maybeSingle();
+
+    if (error) {
+      console.warn('[OZMO] Error al leer store_settings desde Supabase:', error.message, error.details);
+      return db.getSettings();
+    }
+
+    if (data) {
+      const fetched: Settings = {
+        storeName: data.store_name,
+        whatsappNumber: data.whatsapp_number,
+        heroImageUrl: data.hero_image_url,
+        adminPassword: data.admin_password,
+      };
+      const normalized = normalizeSettings(fetched);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(normalized));
+        window.dispatchEvent(new CustomEvent(SETTINGS_UPDATED_EVENT, { detail: normalized }));
+      }
+      console.log('[OZMO] Ajustes cargados desde Supabase correctamente:', normalized.storeName);
+      return normalized;
+    } else {
+      console.warn('[OZMO] No se encontró fila en store_settings (id=1). Asegúrate de ejecutar el SQL de migración en Supabase.');
+    }
+  } catch (err) {
+    console.warn('[OZMO] Excepción al consultar store_settings en Supabase:', err);
+  }
+  return db.getSettings();
+}
+
+function dataURLtoFile(dataurl: string, filename: string): File {
+  const arr = dataurl.split(',');
+  const mimeMatch = arr[0].match(/:(.*?);/);
+  const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new File([u8arr], filename, { type: mime });
+}
+
+export async function saveSettingsToSupabase(
+  newSettings: Settings,
+  heroFile?: File | null
+): Promise<Settings> {
+  const errors: string[] = [];
+  let heroImageUrl = newSettings.heroImageUrl || '';
+
+  // 1. Carga de Imagen (Logo/Banner) al bucket público 'store-assets'
+  let targetFile = heroFile;
+  if (!targetFile && heroImageUrl.startsWith('data:image/')) {
+    try {
+      targetFile = dataURLtoFile(heroImageUrl, `hero_banner_${Date.now()}.png`);
+    } catch (e) {
+      console.warn('[OZMO] No se pudo convertir data URL a archivo para subir:', e);
+    }
+  }
+
+  if (targetFile) {
+    try {
+      const fileExt = targetFile.name.split('.').pop() || 'png';
+      const fileName = `hero_banner_${Date.now()}.${fileExt}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('store-assets')
+        .upload(fileName, targetFile, { upsert: true, contentType: targetFile.type });
+
+      if (uploadError) {
+        console.error('[OZMO] Error subiendo imagen a Storage (store-assets):', uploadError);
+        errors.push(`Error al subir imagen: ${uploadError.message}`);
+      } else if (uploadData) {
+        const { data: publicUrlData } = supabase.storage
+          .from('store-assets')
+          .getPublicUrl(fileName);
+        if (publicUrlData?.publicUrl) {
+          heroImageUrl = publicUrlData.publicUrl;
+        }
+      }
+    } catch (storageErr) {
+      console.error('[OZMO] Excepción durante subida a Storage:', storageErr);
+      errors.push('Error de conexión al subir imagen.');
+    }
+  }
+
+  const normalizedSettings: Settings = {
+    ...newSettings,
+    heroImageUrl,
+  };
+
+  // 2. Cambio de Contraseña vía Supabase Auth (no bloquea si falla)
+  if (normalizedSettings.adminPassword) {
+    try {
+      const { error: authError } = await supabase.auth.updateUser({
+        password: normalizedSettings.adminPassword
+      });
+      if (authError) {
+        console.warn('[OZMO] Supabase Auth password update:', authError.message);
+      }
+    } catch (authErr) {
+      console.warn('[OZMO] Excepción en supabase.auth.updateUser:', authErr);
+    }
+  }
+
+  // 3. Persistencia en la tabla 'store_settings' de Supabase Database (CRÍTICO)
+  try {
+    const { error: dbError } = await supabase
+      .from('store_settings')
+      .upsert({
+        id: 1,
+        store_name: normalizedSettings.storeName,
+        whatsapp_number: normalizedSettings.whatsappNumber,
+        hero_image_url: normalizedSettings.heroImageUrl,
+        admin_password: normalizedSettings.adminPassword,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'id' });
+
+    if (dbError) {
+      console.error('[OZMO] Error al guardar store_settings en Supabase:', dbError);
+      errors.push(`Error en base de datos: ${dbError.message}`);
+    } else {
+      console.log('[OZMO] Ajustes guardados en Supabase correctamente.');
+    }
+  } catch (dbErr) {
+    console.error('[OZMO] Excepción al guardar store_settings en Supabase:', dbErr);
+    errors.push('Error de conexión con la base de datos de Supabase.');
+  }
+
+  // 4. Actualizar Local Storage y notificar eventos locales (siempre se ejecuta)
+  const saved = db.saveSettings(normalizedSettings);
+
+  // 5. Si hubo errores en Supabase, informar al administrador
+  if (errors.length > 0) {
+    throw new Error(
+      `Los cambios se guardaron localmente, pero hubo problemas con Supabase:\n• ${errors.join('\n• ')}\n\nVerifica que la tabla store_settings exista en Supabase y que el bucket store-assets esté configurado.`
+    );
+  }
+
+  return saved;
+}

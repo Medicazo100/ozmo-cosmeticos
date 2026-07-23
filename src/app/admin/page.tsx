@@ -3,9 +3,11 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { db, Product, Order, Settings } from "@/lib/db";
+import { useRouter } from "next/navigation";
+import { db, Product, Order, Settings, fetchSettingsFromSupabase, saveSettingsToSupabase } from "@/lib/db";
 import { supabase } from "@/lib/supabaseClient";
 import { useProductosRealtime, seedSupabaseProducts } from "@/hooks/useProductosRealtime";
+import { revalidateStoreSettings } from "@/app/actions";
 
 export default function AdminPage() {
   // Autenticación
@@ -27,6 +29,8 @@ export default function AdminPage() {
       }
     }
   }, []);
+  const router = useRouter();
+  const [heroImageFile, setHeroImageFile] = useState<File | null>(null);
   const [settings, setSettings] = useState<Settings>({
     whatsappNumber: "524535303820",
     storeName: "OZMO Cosméticos y Perfumes",
@@ -35,8 +39,9 @@ export default function AdminPage() {
 
   useEffect(() => {
     const loaded = db.getSettings();
-    Promise.resolve().then(() => {
-      setSettings(loaded);
+    setSettings(loaded);
+    fetchSettingsFromSupabase().then((remoteSettings) => {
+      setSettings(remoteSettings);
     });
   }, []);
 
@@ -64,6 +69,8 @@ export default function AdminPage() {
   // Visibilidad de contraseñas
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showSettingsPassword, setShowSettingsPassword] = useState(false);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [settingsMessage, setSettingsMessage] = useState("");
 
   // Manejo de Inicio de Sesión
   const handleLogin = (e: React.FormEvent) => {
@@ -79,17 +86,59 @@ export default function AdminPage() {
   };
 
   // Guardar Ajustes de Tienda
-  const handleSaveSettings = (e: React.FormEvent) => {
+  const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     // Si el campo de contraseña queda vacío, conservar la contraseña actual
-    const finalSettings = { ...settings };
-    if (!finalSettings.adminPassword || finalSettings.adminPassword.trim() === "") {
-      const currentSettings = db.getSettings();
-      finalSettings.adminPassword = currentSettings.adminPassword || "admin";
+    setSettingsMessage("");
+    const storeName = settings.storeName.trim();
+    const whatsappNumber = settings.whatsappNumber.replace(/\D/g, "");
+    const heroImageUrl = (settings.heroImageUrl || "").trim();
+    const currentSettings = db.getSettings();
+    if (storeName.length < 2) {
+      setSettingsMessage("Escribe un nombre de tienda válido.");
+      return;
     }
-    db.saveSettings(finalSettings);
-    setSettings(finalSettings);
-    alert("Configuración guardada correctamente.");
+    if (!/^\d{10,15}$/.test(whatsappNumber)) {
+      setSettingsMessage("El WhatsApp debe contener entre 10 y 15 dígitos con código de país.");
+      return;
+    }
+    if (heroImageUrl && !heroImageUrl.startsWith("data:image/") && !/^(https?:\/\/|\/)/i.test(heroImageUrl)) {
+      setSettingsMessage("La imagen debe ser una URL válida, una ruta local o una imagen cargada desde el dispositivo.");
+      return;
+    }
+    setIsSavingSettings(true);
+    const finalSettings = {
+      ...settings,
+      storeName,
+      whatsappNumber,
+      heroImageUrl: heroImageUrl || currentSettings.heroImageUrl,
+      adminPassword: settings.adminPassword?.trim() || currentSettings.adminPassword || "admin",
+    };
+    try {
+      const savedSettings = await saveSettingsToSupabase(finalSettings, heroImageFile);
+      setSettings(savedSettings);
+      setHeroImageFile(null);
+
+      // Revalidación global del caché (Server Action + router.refresh)
+      await revalidateStoreSettings();
+      router.refresh();
+
+      setSettingsMessage("✅ Cambios guardados y sincronizados con Supabase correctamente.");
+    } catch (error) {
+      console.error("[OZMO] Error saving settings:", error);
+      const errorMsg = error instanceof Error ? error.message : "No fue posible guardar los cambios.";
+      // Si el error menciona "localmente", es un éxito parcial (local OK, Supabase falló)
+      if (errorMsg.includes("localmente")) {
+        // Actualizar estado local con los ajustes que sí se guardaron en localStorage
+        setSettings(db.getSettings());
+        setHeroImageFile(null);
+        setSettingsMessage(`⚠️ ${errorMsg}`);
+      } else {
+        setSettingsMessage(`❌ ${errorMsg}`);
+      }
+    } finally {
+      setIsSavingSettings(false);
+    }
   };
 
   // Subir imagen de portada desde el dispositivo
@@ -97,12 +146,25 @@ export default function AdminPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!file.type.startsWith("image/")) {
+      setSettingsMessage("Selecciona un archivo de imagen válido.");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setSettingsMessage("La imagen no puede superar los 5 MB.");
+      e.target.value = "";
+      return;
+    }
+
+    setHeroImageFile(file);
     const reader = new FileReader();
     reader.onloadend = () => {
       if (typeof reader.result === 'string') {
         setSettings(prev => ({ ...prev, heroImageUrl: reader.result as string }));
       }
     };
+    reader.onerror = () => setSettingsMessage("No fue posible leer la imagen seleccionada.");
     reader.readAsDataURL(file);
   };
 
@@ -1033,7 +1095,7 @@ export default function AdminPage() {
                       Imagen de Portada Principal (Hero)
                     </label>
                     <input
-                      type="url"
+                      type="text"
                       value={settings.heroImageUrl || ""}
                       onChange={(e) => setSettings({ ...settings, heroImageUrl: e.target.value })}
                       placeholder="Ej. /hero_banner.png"
@@ -1085,11 +1147,18 @@ export default function AdminPage() {
                 </div>
               </div>
 
+              {settingsMessage && (
+                <p role="status" className={`text-xs whitespace-pre-line ${settingsMessage.includes("✅") ? "text-emerald-400" : settingsMessage.includes("⚠️") ? "text-amber-300" : "text-red-400"}`}>
+                  {settingsMessage}
+                </p>
+              )}
+
               <button
                 type="submit"
+                disabled={isSavingSettings}
                 className="w-full py-3.5 bg-rose-500 hover:bg-rose-650 text-white font-semibold rounded-xl text-xs uppercase tracking-wider transition-all duration-300 cursor-pointer"
               >
-                Guardar Cambios
+                {isSavingSettings ? "Guardando..." : "Guardar Cambios"}
               </button>
             </form>
           </section>
