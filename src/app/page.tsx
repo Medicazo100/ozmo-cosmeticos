@@ -92,8 +92,40 @@ export default function CatalogPage() {
     localStorage.setItem("ozmo_cosmeticos_cart", JSON.stringify(cart));
   }, [cart, cartHydrated]);
 
-  // Recargar catálogo al enfocar la ventana o cambio de ajustes (con Supabase Realtime)
+  // Recargar catálogo al enfocar la ventana o cambio de ajustes (Fresco y sin caché)
   useEffect(() => {
+    // 1. Cargar lo que haya en memoria local rápido para evitar parpadeos
+    const loaded = db.getSettings();
+    setSettings(loaded);
+
+    // 2. FUNCIÓN DE RECONSULTA DIRECTA: Trae los datos frescos evadiendo el caché de Vercel
+    const fetchFreshSettings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('store_settings')
+          .select('*')
+          .limit(1)
+          .single();
+
+        if (data && !error) {
+          const freshSettings: Settings = {
+            storeName: data.store_name,
+            whatsappNumber: data.whatsapp_number,
+            heroImageUrl: data.hero_image_url,
+            adminPassword: data.admin_password,
+          };
+          db.saveSettings(freshSettings);
+          setSettings(freshSettings);
+        }
+      } catch (err) {
+        console.error("[OZMO] Error obteniendo ajustes frescos:", err);
+      }
+    };
+
+    // Consultar inmediatamente al montar la vista
+    fetchFreshSettings();
+
+    // Listeners para sincronización local entre pestañas
     const handleSettingsUpdate = (event: Event) => {
       const customEvent = event as CustomEvent<Settings>;
       setSettings(customEvent.detail || db.getSettings());
@@ -103,13 +135,15 @@ export default function CatalogPage() {
         setSettings(db.getSettings());
       }
     };
-    const handleFocus = () => setSettings(db.getSettings());
+    
+    // Al reenfocar la ventana, reconsultar la base de datos
+    const handleFocus = () => fetchFreshSettings();
 
     window.addEventListener(SETTINGS_UPDATED_EVENT, handleSettingsUpdate);
     window.addEventListener("storage", handleStorage);
     window.addEventListener("focus", handleFocus);
 
-    // Suscripción Realtime a cambios en la tabla 'store_settings' de Supabase
+    // 3. SUSCRIPCIÓN REALTIME COMO DISPARADOR (ALARMA)
     const settingsChannel = supabase
       .channel("cambios-store-settings")
       .on(
@@ -119,19 +153,11 @@ export default function CatalogPage() {
           schema: "public",
           table: "store_settings"
         },
-        (payload) => {
-          console.log('[OZMO] Realtime: cambio detectado en store_settings:', payload.eventType);
-          if (payload.new) {
-            const newRow = payload.new as Record<string, any>;
-            const updatedSettings: Settings = {
-              storeName: newRow.store_name,
-              whatsappNumber: newRow.whatsapp_number,
-              heroImageUrl: newRow.hero_image_url,
-              adminPassword: newRow.admin_password,
-            };
-            const saved = db.saveSettings(updatedSettings);
-            setSettings(saved);
-          }
+        () => {
+          console.log('[OZMO] Realtime: Cambio en ajustes detectado. Refrescando UI...');
+          // En lugar de confiar en payload.new (que puede llegar incompleto),
+          // forzamos la reconsulta directa a la base de datos de PostgreSQL.
+          fetchFreshSettings();
         }
       )
       .subscribe((status) => {
